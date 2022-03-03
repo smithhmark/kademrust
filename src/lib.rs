@@ -1,6 +1,11 @@
 pub type NodeID = usize;
+pub type Key = usize;
+pub type Nonce = usize;
+pub type Value = Vec<u8>;
 
+// t.co/Qu1IUXfCms
 pub type NodeAddress = String;
+pub type NodePort = usize;
 
 fn iddiff(a: &NodeID, b: &NodeID) -> usize{
     (*a^*b).count_ones() as usize
@@ -10,6 +15,7 @@ fn iddiff(a: &NodeID, b: &NodeID) -> usize{
 pub struct NodeDescription {
     id: NodeID,
     address: NodeAddress,
+    port: NodePort,
 }
 
 //pub struct Neighborhood { }
@@ -18,51 +24,64 @@ type Neighborhood = Vec<NodeDescription>;
 #[derive(Debug, Default)]
 pub struct RoutingTable {
     id: NodeID,
-    net_size: usize,
     key_space: usize,
+    kay: usize,
     hoods: Vec<Neighborhood>,
 }
 
 trait RTable {
     fn population(&self) -> usize;
     fn insert(&mut self, other: NodeDescription);
+    fn kay(&self) -> usize;
 }
 
 impl RoutingTable {
-    fn new(id: NodeID, net_size: usize, key_space: usize) -> RoutingTable {
-        let hoods: Vec<Neighborhood> = Vec::with_capacity(key_space);
+    fn new(id: NodeID, key_space: usize, kay: usize) -> RoutingTable {
+        let mut hoods: Vec<Neighborhood> = Vec::with_capacity(key_space);
+        for i in 0..key_space {
+            hoods.push(vec![]);
+        }
         RoutingTable {
             id,
-            net_size,
             key_space,
+            kay,
             hoods,
         }
     }
 }
 
 impl RTable for RoutingTable {
+    fn kay(&self) -> usize {
+        self.kay
+    }
     fn population(&self) -> usize {
         self.hoods.iter().map(|n| n.len()).sum()
     }
 
     fn insert(&mut self, other: NodeDescription) {
-        // calc difference
         let diff = iddiff(&self.id, &other.id);
-        println!("indexing at distance: {}", diff);
+        self.hoods[diff].push(other);
     }
 }
 
+pub trait KademliaNode {
+    fn find_node(key: Key);
+    fn find_value(key: Key);
+    fn store(key: Key, val: Value);
+    fn ping(node: NodeID);
+}
+
 pub struct Node {
-    id: NodeID,
-    table: RoutingTable,
+    pub id: NodeID,
+    pub table: RoutingTable,
 }
 
 impl Node {
     fn new(id: NodeID) -> Self {
         let table = RoutingTable {
             id,
-            net_size: 1,
             key_space: 1,
+            kay: 5,
             hoods: vec![],
         };
         Node { id, table }
@@ -107,10 +126,10 @@ mod tests {
     #[test]
     fn test_table_index() {
         let desc = NodeDescription::default();
-        let mut table = RoutingTable::new(0, 1, 2);
+        let mut table = RoutingTable::new(1, 2, 5);
         assert_eq!(0, table.population());
         table.insert(desc);
-        assert_eq!(0, table.population());
+        assert_eq!(1, table.population());
     }
 
     #[test]
