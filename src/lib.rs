@@ -8,7 +8,7 @@ pub type NodeAddress = String;
 pub type NodePort = usize;
 
 fn iddiff(a: &NodeID, b: &NodeID) -> usize{
-    (*a^*b).count_ones() as usize
+    *a^*b
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -38,7 +38,7 @@ trait RTable {
 impl RoutingTable {
     fn new(id: NodeID, key_space: usize, kay: usize) -> RoutingTable {
         let mut hoods: Vec<Neighborhood> = Vec::with_capacity(key_space);
-        for i in 0..key_space {
+        for _i in 0..key_space {
             hoods.push(vec![]);
         }
         RoutingTable {
@@ -139,6 +139,7 @@ mod tests {
         assert_eq!(iddiff(&42,&42), 0);
 
         assert_eq!(iddiff(&0,&1), 1);
-        assert_eq!(iddiff(&1,&2), 2);
+        assert_eq!(iddiff(&2,&0), 2);
+        assert_eq!(iddiff(&1,&2), 3);
     }
 }
