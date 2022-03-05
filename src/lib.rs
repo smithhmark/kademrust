@@ -1,4 +1,4 @@
-pub type NodeID = usize;
+pub type NodeID = u128;
 pub type Key = usize;
 pub type Nonce = usize;
 pub type Value = Vec<u8>;
@@ -7,8 +7,8 @@ pub type Value = Vec<u8>;
 pub type NodeAddress = String;
 pub type NodePort = usize;
 
-fn iddiff(a: &NodeID, b: &NodeID) -> usize{
-    *a^*b
+fn iddiff(a: &NodeID, b: &NodeID) -> NodeID {
+    *a ^ *b
 }
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -60,7 +60,13 @@ impl RTable for RoutingTable {
 
     fn insert(&mut self, other: NodeDescription) {
         let diff = iddiff(&self.id, &other.id);
-        self.hoods[diff].push(other);
+        if diff > self.hoods.len() as NodeID{
+            let insert_at = self.hoods.len()-1;
+            self.hoods[insert_at].push(other);
+            
+        } else {
+            self.hoods[diff as usize].push(other);
+        }
     }
 }
 
@@ -133,13 +139,13 @@ mod tests {
     }
 
     #[test]
-    fn test_iddiff(){
-        assert_eq!(iddiff(&0,&0), 0);
-        assert_eq!(iddiff(&1,&1), 0);
-        assert_eq!(iddiff(&42,&42), 0);
+    fn test_iddiff() {
+        assert_eq!(iddiff(&0, &0), 0);
+        assert_eq!(iddiff(&1, &1), 0);
+        assert_eq!(iddiff(&42, &42), 0);
 
-        assert_eq!(iddiff(&0,&1), 1);
-        assert_eq!(iddiff(&2,&0), 2);
-        assert_eq!(iddiff(&1,&2), 3);
+        assert_eq!(iddiff(&0, &1), 1);
+        assert_eq!(iddiff(&2, &0), 2);
+        assert_eq!(iddiff(&1, &2), 3);
     }
 }
