@@ -8,7 +8,7 @@ pub struct Node {
 }
 
 impl Node {
-    fn new(id: k::NodeID) -> Self {
+    pub fn new(id: k::NodeID) -> Self {
         let table = k::RoutingTable {
             id,
             key_space: 1,

@@ -1,10 +1,18 @@
+//#![allow(dead_code)]
+//#![allow(unused_variables)]
+
 //use std::cmp;
+
 use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr};
 
 pub type NodeID = u128;
+
+#[allow(dead_code)]
 pub type Key = usize;
+#[allow(dead_code)]
 pub type Nonce = usize;
+#[allow(dead_code)]
 pub type Value = Vec<u8>;
 
 // t.co/Qu1IUXfCms
@@ -17,9 +25,8 @@ fn iddiff(a: &NodeID, b: &NodeID) -> NodeID {
 
 fn bucket_id(a: &NodeID, b: &NodeID, key_space: usize) -> usize {
     let distance = iddiff(a, b);
-    let base_line = NodeID::leading_zeros((1 as NodeID) << (key_space - 1));
-    let leading_zeros = (NodeID::leading_zeros(distance) - base_line) as usize;
-    leading_zeros
+    let base_line = NodeID::BITS - key_space as u32;
+    (NodeID::leading_zeros(distance) - base_line) as usize
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -30,7 +37,7 @@ pub struct NodeDescription {
 }
 
 impl NodeDescription {
-    fn dummy(id: NodeID) -> NodeDescription {
+    fn _dummy(id: NodeID) -> NodeDescription {
         NodeDescription {
             id,
             address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
@@ -74,7 +81,7 @@ trait RTable {
 }
 
 impl RoutingTable {
-    fn new(id: NodeID, key_space: usize, kay: usize) -> RoutingTable {
+    pub fn new(id: NodeID, key_space: usize, kay: usize) -> RoutingTable {
         let mut hoods: Vec<Neighborhood> = Vec::with_capacity(key_space);
         hoods.push(vec![]);
         RoutingTable {
@@ -84,7 +91,7 @@ impl RoutingTable {
             hoods,
         }
     }
-    fn pop_by_hood(&self) -> Vec<usize> {
+    fn _pop_by_hood(&self) -> Vec<usize> {
         self.hoods.iter().map(|h| h.len()).collect()
     }
 }
@@ -201,22 +208,22 @@ mod tests {
         assert_eq!(1, table.hoods.len());
         assert_eq!(0, table.hoods[0].len());
         assert_eq!(0, table.population());
-        println!("sizes:{:?}", table.pop_by_hood());
+        println!("sizes:{:?}", table._pop_by_hood());
         println!("first insert");
-        table.insert(NodeDescription::dummy(4));
-        println!("sizes:{:?}", table.pop_by_hood());
+        table.insert(NodeDescription::_dummy(4));
+        println!("sizes:{:?}", table._pop_by_hood());
         assert_eq!(1, table.hoods.len());
         assert_eq!(1, table.population());
         assert_eq!(1, table.hoods[0].len());
         println!("second insert");
-        table.insert(NodeDescription::dummy(3));
-        println!("sizes:{:?}", table.pop_by_hood());
+        table.insert(NodeDescription::_dummy(3));
+        println!("sizes:{:?}", table._pop_by_hood());
         assert_eq!(1, table.hoods.len());
         assert_eq!(2, table.population());
         assert_eq!(2, table.hoods[0].len());
         println!("third insert");
-        table.insert(NodeDescription::dummy(2));
-        println!("sizes:{:?}", table.pop_by_hood());
+        table.insert(NodeDescription::_dummy(2));
+        println!("sizes:{:?}", table._pop_by_hood());
         assert_eq!(3, table.hoods.len());
         assert_eq!(3, table.population());
         assert_eq!(0, table.hoods[0].len());
