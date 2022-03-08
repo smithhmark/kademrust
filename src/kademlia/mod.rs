@@ -141,22 +141,20 @@ impl RTable for RoutingTable {
                 println!("\t\tsplit bucket into {}", new_buckets.len());
                 let closest = new_buckets.keys().max();
                 let furthest = new_buckets.keys().min();
-                println!("\t\tclosest bucket {}",closest.unwrap());
-                println!("\t\tfurthest bucket {}",furthest.unwrap());
+                println!("\t\tclosest bucket {}", closest.unwrap());
+                println!("\t\tfurthest bucket {}", furthest.unwrap());
                 println!("\t\tdealing with orig buck:{}", last_bucket);
                 match new_buckets.get(&last_bucket) {
                     Some(content) => self.hoods[last_bucket] = content.to_vec(),
                     None => self.hoods[last_bucket] = Vec::with_capacity(self.kay()),
                 }
-                for buck_id in
-                    (initial_len)..=*closest.expect("should have split into buckets")
-                {
+                for buck_id in (initial_len)..=*closest.expect("should have split into buckets") {
                     println!("\t\tdealing with buck:{}", buck_id);
                     match new_buckets.get(&buck_id) {
                         Some(content) => {
                             println!("\t\t\thad data");
                             self.hoods.push(content.to_vec())
-                        },
+                        }
                         None => self.hoods.push(Vec::with_capacity(self.kay())),
                     }
                 }
