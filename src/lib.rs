@@ -4,12 +4,12 @@ use crate::kademlia as k;
 
 pub struct Node {
     pub id: k::NodeID,
-    pub table: k::RoutingTable,
+    pub table: k::VectorRoutingTable,
 }
 
 impl Node {
     pub fn new(id: k::NodeID) -> Self {
-        let table = k::RoutingTable {
+        let table = k::VectorRoutingTable {
             id,
             key_space: 1,
             kay: 5,

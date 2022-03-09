@@ -67,7 +67,7 @@ pub trait KademliaNode {
 type Neighborhood = Vec<NodeDescription>;
 
 #[derive(Debug, Default)]
-pub struct RoutingTable {
+pub struct VectorRoutingTable {
     pub id: NodeID,
     pub key_space: usize,
     pub kay: usize,
@@ -80,11 +80,11 @@ trait RTable {
     fn kay(&self) -> usize;
 }
 
-impl RoutingTable {
-    pub fn new(id: NodeID, key_space: usize, kay: usize) -> RoutingTable {
+impl VectorRoutingTable {
+    pub fn new(id: NodeID, key_space: usize, kay: usize) -> VectorRoutingTable {
         let mut hoods: Vec<Neighborhood> = Vec::with_capacity(key_space);
         hoods.push(vec![]);
-        RoutingTable {
+        VectorRoutingTable {
             id,
             key_space,
             kay,
@@ -96,7 +96,7 @@ impl RoutingTable {
     }
 }
 
-impl RTable for RoutingTable {
+impl RTable for VectorRoutingTable {
     fn kay(&self) -> usize {
         self.kay
     }
@@ -176,18 +176,18 @@ mod tests {
 
     #[test]
     fn test_table_initialization() {
-        let table = RoutingTable::new(0, 1, 2);
+        let table = VectorRoutingTable::new(0, 1, 2);
         let pop = table.population();
         assert_eq!(0, pop);
 
-        let table = RoutingTable::default();
+        let table = VectorRoutingTable::default();
         let pop = table.population();
         assert_eq!(0, pop);
     }
 
     #[test]
     fn test_table_population() {
-        let mut table = RoutingTable::default();
+        let mut table = VectorRoutingTable::default();
         assert_eq!(0, table.population());
         assert_eq!(0, table.hoods.len());
         table.hoods.push(vec![]);
@@ -202,7 +202,7 @@ mod tests {
     fn test_table_insert() {
         let key_space = 4;
         let kay = 2;
-        let mut table = RoutingTable::new(0, key_space, kay);
+        let mut table = VectorRoutingTable::new(0, key_space, kay);
         assert_eq!(1, table.hoods.len());
         assert_eq!(0, table.hoods[0].len());
         assert_eq!(0, table.population());
