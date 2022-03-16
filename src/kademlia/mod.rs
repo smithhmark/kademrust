@@ -3,14 +3,13 @@
 
 //use std::cmp;
 
-use log::{debug};
+use log::debug;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 
 pub type NodeID = u128;
+pub type Key = u128;
 
-#[allow(dead_code)]
-pub type Key = usize;
 #[allow(dead_code)]
 pub type Nonce = usize;
 #[allow(dead_code)]
@@ -28,6 +27,16 @@ fn bucket_id(a: &NodeID, b: &NodeID, key_space: usize) -> usize {
     let distance = iddiff(a, b);
     let base_line = NodeID::BITS - key_space as u32;
     (NodeID::leading_zeros(distance) - base_line) as usize
+}
+
+fn constrain_bucket(bucket: usize, limit: usize) -> usize {
+    if bucket >= limit {
+        debug!("inserting into a bucket {} that doesn't exist yet", bucket);
+        limit - 1
+    } else {
+        debug!("bucket is a 'near' neighborhood");
+        bucket
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -78,6 +87,7 @@ pub struct VectorRoutingTable {
 trait RTable {
     fn population(&self) -> usize;
     fn insert(&mut self, other: NodeDescription);
+    fn lookup(&self, key: Key) -> Neighborhood;
     fn kay(&self) -> usize;
 }
 
@@ -106,31 +116,32 @@ impl RTable for VectorRoutingTable {
         self.hoods.iter().map(|n| n.len()).sum()
     }
 
+    fn lookup(&self, key: Key) -> Neighborhood {
+        let bucket = bucket_id(&self.id, &key, self.key_space);
+        let start_at = constrain_bucket(bucket, self.hoods.len());
+        debug!("starting at bucket:{}", start_at);
+        self.hoods[start_at..]
+            .iter()
+            .flatten()
+            .take(self.kay())
+            .map(|x| *x)
+            .collect()
+    }
+
     fn insert(&mut self, other: NodeDescription) {
-        let distance = iddiff(&self.id, &other.id);
-        debug!("\tdistance:{}", distance);
         let bucket = bucket_id(&self.id, &other.id, self.key_space);
-        debug!("\tbucket:{}", bucket);
-        //let insert_at = if distance >= self.hoods.len() as NodeID {
+        debug!("bucket:{}", bucket);
         let initial_len = self.hoods.len();
         let last_bucket = initial_len - 1;
-        let insert_at = if bucket >= self.hoods.len() {
-            debug!(
-                "\tinserting into a bucket {} that doesn't exist yet",
-                bucket
-            );
-            last_bucket
-        } else {
-            debug!("\tdistance hits 'near' neighborhood");
-            distance as usize
-        };
+        let insert_at = constrain_bucket(bucket, self.hoods.len());
+
         if self.hoods[insert_at].len() < self.kay() {
-            debug!("\tplenty of room for the desc");
+            debug!("plenty of room for the desc");
             self.hoods[insert_at].push(other);
         } else {
-            debug!("\tNo room");
+            debug!("No room");
             if insert_at == last_bucket {
-                debug!("\tpartitioning furthest hood:{:?}", self.hoods[insert_at]);
+                debug!("partitioning furthest hood:{:?}", self.hoods[insert_at]);
                 let mut new_buckets: HashMap<usize, Neighborhood> = HashMap::new();
                 for (k, v) in self.hoods[insert_at]
                     .iter()
@@ -139,21 +150,21 @@ impl RTable for VectorRoutingTable {
                     new_buckets.entry(k).or_insert_with(Vec::new).push(v);
                 }
                 //let split_into = new_buckets.len();
-                debug!("\t\tsplit bucket into {}", new_buckets.len());
+                debug!("\tsplit bucket into {}", new_buckets.len());
                 let closest = new_buckets.keys().max();
                 let furthest = new_buckets.keys().min();
-                debug!("\t\tclosest bucket {}", closest.unwrap());
-                debug!("\t\tfurthest bucket {}", furthest.unwrap());
-                debug!("\t\tdealing with orig buck:{}", last_bucket);
+                debug!("\tclosest bucket {}", closest.unwrap());
+                debug!("\tfurthest bucket {}", furthest.unwrap());
+                debug!("\tdealing with orig buck:{}", last_bucket);
                 match new_buckets.get(&last_bucket) {
                     Some(content) => self.hoods[last_bucket] = content.to_vec(),
                     None => self.hoods[last_bucket] = Vec::with_capacity(self.kay()),
                 }
                 for buck_id in (initial_len)..=*closest.expect("should have split into buckets") {
-                    debug!("\t\tdealing with buck:{}", buck_id);
+                    debug!("\tdealing with buck:{}", buck_id);
                     match new_buckets.get(&buck_id) {
                         Some(content) => {
-                            debug!("\t\t\thad data");
+                            debug!("\t\thad data");
                             self.hoods.push(content.to_vec())
                         }
                         None => self.hoods.push(Vec::with_capacity(self.kay())),
@@ -163,7 +174,7 @@ impl RTable for VectorRoutingTable {
                 //debug!("\n further hood:{:?}", farther);
                 self.hoods[bucket].push(other);
             } else {
-                debug!("\tNo room, take a hike");
+                debug!("No room, take a hike");
                 // possibly maintain pool of replacements
             };
         };
@@ -243,5 +254,27 @@ mod tests {
         assert_eq!(iddiff(&0, &1), 1);
         assert_eq!(iddiff(&2, &0), 2);
         assert_eq!(iddiff(&1, &2), 3);
+    }
+
+    #[test]
+    fn test_lookup() {
+        setup();
+        let key_space = 4;
+        let kay = 2;
+        let mut table = VectorRoutingTable::new(0, key_space, kay);
+        table.insert(NodeDescription::_dummy(1)); //dist = 1 => bucket: 3
+        table.insert(NodeDescription::_dummy(2)); //dist = 2 => bucket: 3
+        table.insert(NodeDescription::_dummy(3)); //dist = 3 => bucket: 2
+        table.insert(NodeDescription::_dummy(4)); //dist = 4 => bucket: 1
+        let hood = table.lookup(2);
+        assert_eq!(
+            hood,
+            vec![NodeDescription::_dummy(2), NodeDescription::_dummy(3)]
+        );
+        let hood = table.lookup(1);
+        assert_eq!(
+            hood,
+            vec![NodeDescription::_dummy(1), NodeDescription::_dummy(2)]
+        );
     }
 }
